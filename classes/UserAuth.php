@@ -15,7 +15,14 @@ class UserAuth extends Dbh
     public function register($fullname, $email, $password, $confirmPassword, $country, $gender)
     {
         $conn = $this->db->connect();
-        if ($this->confirmPasswordMatch($password, $confirmPassword)) {
+        if (!$this->confirmPasswordMatch($password, $confirmPassword)) {
+            echo "Password doesn't match,";
+            exit();
+        }
+        if ($this->checkEmailExist($email)) {
+            echo " This email is taken";
+            exit();
+        } else {
             $sql = "INSERT INTO Students (`full_names`, `email`, `password`, `country`, `gender`) VALUES ('$fullname','$email', '$password', '$country', '$gender')";
             if ($conn->query($sql)) {
                 echo "Registration Success";
@@ -100,18 +107,22 @@ class UserAuth extends Dbh
     public function updateUser($email, $password)
     {
         $conn = $this->db->connect();
-        $sql = "UPDATE Students SET password = '$password' WHERE email = '$email'";
-        if ($conn->query($sql) === TRUE) {
-            header("Location: dashboard.php?update=success");
+        if ($this->checkEmailExist($email)) {
+            $sql = "UPDATE Students SET password = '$password' WHERE email = '$email'";
+            if ($conn->query($sql) === TRUE) {
+                header("Location: dashboard.php?update=success");
+            } else {
+                header("Location: forms/resetpassword.php?error=1");
+            }
         } else {
-            header("Location: forms/resetpassword.php?error=1");
+            header('Location: forms/login.php');
         }
     }
 
     public function getUserByUsername($full_names)
     {
         $conn = $this->db->connect();
-        $sql = "SELECT * FROM users WHERE full_names = '$full_names'";
+        $sql = "SELECT * FROM Students WHERE full_names = '$full_names'";
         $result = $conn->query($sql);
         if ($result->num_rows > 0) {
             return $result->fetch_assoc();
@@ -130,6 +141,19 @@ class UserAuth extends Dbh
     public function confirmPasswordMatch($password, $confirmPassword)
     {
         if ($password === $confirmPassword) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function checkEmailExist($email)
+    {
+        $conn = $this->db->connect();
+        $sql = "SELECT * FROM Students WHERE email='$email'";
+        $result = mysqli_query($conn, $sql);
+        $user_count = mysqli_num_rows($result);
+        if ($user_count > 0) {
             return true;
         } else {
             return false;
